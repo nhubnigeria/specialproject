@@ -20,10 +20,10 @@ const
   EventCardModel = require('./models/event-cards'),
   sendEmail = require('./send-mail'),
   BUCKET = 'xx-arbs-bet-screenshots',
-  SMARKETS_URL = process.env.SMARKETS_URL,
-  BETFAIR_URL = process.env.BETFAIR_URL,
-  SMARKETS_EVENTS_CONTAINER_SELECTOR = 'ul.contracts',
-  SMARKETS_SELECTIONS_SELECTOR = 'div.contract-info',
+  MATCHBOOK_URL = process.env.MATCHBOOK_URL,
+  BETDAQ_URL = process.env.BETDAQ_URL,
+  MATCHBOOK_EVENTS_CONTAINER_SELECTOR = '#app-next > div > div.mb-app__containerChildren > div > div > div.mb-event__markets.mb-event__markets--standalone > div:nth-child(1) > div.mb-market__runners',
+  MATCHBOOK_SELECTIONS_SELECTOR = 'div.contract-info',
   EVENT_END_URL = process.env.EVENT_END_URL,
   HR_EVENT_LINKS_SELECTOR = 'a.race-link',
   GENERIC_EVENT_LINKS_SELECTOR = 'span.event-name',
@@ -33,8 +33,8 @@ const
 let
   selectionsList,
   marketControllers = {},
-  BETFAIR,
-  SMARKETS,
+  BETDAQ,
+  MATCHBOOK,
   SPORT,
   EVENT_LABEL,
   TARGETS,
@@ -54,7 +54,7 @@ async function getSelections() {
   let
     sport,
     flag;
-  const URL_ARR = SMARKETS_URL.split('/');
+  const URL_ARR = MATCHBOOK_URL.split('/');
   sport = URL_ARR[6];
   if(sport == 'horse-racing' ) {
     flag = 'HR';
@@ -75,18 +75,18 @@ async function getSelections() {
   await page.setViewport({width: 1366, height: 768});
   // set the user agent
   await page.setUserAgent('Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko)');
-  await page.goto(SMARKETS_URL, {
+  await page.goto(MATCHBOOK_URL, {
     waitUntil: 'networkidle2',
     timeout: 180000
   });
   await page.waitFor(10*1000);
   // ensure race container selector available
-  await page.waitForSelector(SMARKETS_EVENTS_CONTAINER_SELECTOR);
+  await page.waitForSelector(MATCHBOOK_EVENTS_CONTAINER_SELECTOR);
   // allow 'page' instance to output any calls to browser log to node log
   page.on('console', data => console.log(data.text()));
-  console.log('SMARKETS_EVENTS_CONTAINER_SELECTOR found, continuing...');
+  console.log('MATCHBOOK_EVENTS_CONTAINER_SELECTOR found, continuing...');
   // get list of selections
-  selectionsList = await page.$$eval(SMARKETS_SELECTIONS_SELECTOR, (targets, flag) => {
+  selectionsList = await page.$$eval(MATCHBOOK_SELECTIONS_SELECTOR, (targets, flag) => {
     let selectionsList = [];
     if(flag == 'HR') {
       targets.filter(target => {
@@ -119,7 +119,7 @@ async function createEventCard() {
     EVENT_ARR,
     timeLabel = moment().format('L');
   timeLabel = timeLabel.split('/').reverse().join('-');
-  let URL_ARR = SMARKETS_URL.split('/');
+  let URL_ARR = MATCHBOOK_URL.split('/');
   sport = URL_ARR[6];
   if(sport == 'horse-racing' ) {
     EVENT_ARR = URL_ARR.slice(7);
@@ -170,13 +170,13 @@ function forkMarketController(SELECTION, eventIdentifiers) {
     if(!!data.placeBet) {
       const {selection, B0O, L0O, liquidity} = data.payload;
       if(data.payload.back == 'b') {
-        BETFAIR.send({
+        BETDAQ.send({
           selection,
           liquidity,
           odds: B0O,
           type: 'bet'
         });
-        return SMARKETS.SEND({
+        return MATCHBOOK.SEND({
           selection,
           liquidity,
           odds: L0O,
@@ -184,13 +184,13 @@ function forkMarketController(SELECTION, eventIdentifiers) {
         });
       }
       else {
-        BETFAIR.send({
+        BETDAQ.send({
           selection,
           liquidity,
           odds: L0O,
           type: 'lay'
         });
-        return SMARKETS.SEND({
+        return MATCHBOOK.SEND({
           selection,
           liquidity,
           odds: B0O,
@@ -206,34 +206,34 @@ function forkMarketController(SELECTION, eventIdentifiers) {
 function spawnBots() {
   // spawn the BOTS
   console.log(`spawning the streaming bots`);
-  spawnBetfairBot();
-  spawnSmarketsBot();
+  spawnBetdaqBot();
+  spawnMatchbookBot();
   return Promise.resolve(true);
 }
 
-function spawnBetfairBot() {
+function spawnBetdaqBot() {
 
   const regx = /['"]/;
 
-  console.log(`Spawning Betfair BOT`);
+  console.log(`Spawning Betdaq BOT`);
 
-  BETFAIR = spawn('node', ['./betfair-hr.js', EVENT_LABEL], {
+  BETDAQ = spawn('node', ['./betdaq-hr.js', EVENT_LABEL], {
     stdio: ['pipe', 'ipc', 'pipe']
   });
 
   // listen for data
-  BETFAIR.on('message', data => {
-    console.log('data from Betfair...');
+  BETDAQ.on('message', data => {
+    console.log('data from Betdaq...');
     const dataObj = JSON.parse(data);
     if(!!dataObj.alert) {
       return selectionsList.forEach(marketController => {
         if(marketController in marketControllers) {
           marketControllers[marketController].send({
-            exchange: 'smarkets',
+            exchange: 'matchbook',
             alert: 'race started'
           });
           return marketControllers[marketController].send({
-            exchange: 'betfair',
+            exchange: 'betdaq',
             alert: 'race started'
           });
         }
@@ -284,50 +284,50 @@ function spawnBetfairBot() {
       const marketController = marketControllerArray[0];
       if(marketController in marketControllers) {
         return marketControllers[marketController].send({
-          exchange: 'betfair',
+          exchange: 'betdaq',
           payload: dataObj});
       }
     }
   });
 
-  BETFAIR.stderr.on('data', err => {
-    console.error(`BETFAIR bot err`);
+  BETDAQ.stderr.on('data', err => {
+    console.error(`BETDAQ bot err`);
     console.error(err.toString());
-    console.log(`terminating existing Betfair BOT`);
-    process.kill(BETFAIR.pid);
-    console.log(`respawning Betfair BOT`);
-    return spawnBetfairBot();
+    console.log(`terminating existing Betdaq BOT`);
+    process.kill(BETDAQ.pid);
+    console.log(`respawning Betdaq BOT`);
+    return spawnBetdaqBot();
   });
 
-  BETFAIR.on('error', err => {
-    console.error(`BETFAIR CP err`);
+  BETDAQ.on('error', err => {
+    console.error(`BETDAQ CP err`);
     console.error(err);
-    console.log(`terminating existing Betfair BOT`);
-    process.kill(BETFAIR.pid);
-    console.log(`respawning Betfair BOT`);
-    return spawnBetfairBot();
+    console.log(`terminating existing Betdaq BOT`);
+    process.kill(BETDAQ.pid);
+    console.log(`respawning Betdaq BOT`);
+    return spawnBetdaqBot();
   });
 
-  BETFAIR.on('close', code => {
+  BETDAQ.on('close', code => {
     if(code < 1) {
-      return console.log(`BETFAIR BOT closed normally...`);
+      return console.log(`BETDAQ BOT closed normally...`);
     } else {
-      return console.error(`BETFAIR BOT closed abnormally...`);
+      return console.error(`BETDAQ BOT closed abnormally...`);
     }
   });
 }
 
-function spawnSmarketsBot() {
-  console.log(`Spawning Smarkets BOT`);
+function spawnMatchbookBot() {
+  console.log(`Spawning Matchbook BOT`);
 
-  SMARKETS = spawn('node', ['./smarkets-hr.js'], {
+  MATCHBOOK = spawn('node', ['./matchbook-hr.js'], {
     stdio: ['pipe', 'ipc', 'pipe']
   });
 
   // listen for data
 
-  SMARKETS.on('message', data => {
-    console.log('data from Smarkets...');
+  MATCHBOOK.on('message', data => {
+    console.log('data from Matchbook...');
     const dataObj = JSON.parse(data);
     if(!!dataObj.screenshot) {
       // SETUP
@@ -366,35 +366,35 @@ function spawnSmarketsBot() {
       const marketController = dataObj.selection;
       if(marketController in marketControllers) {
         return marketControllers[marketController].send({
-          exchange: 'smarkets',
+          exchange: 'matchbook',
           payload: dataObj});
       }
     }
   });
 
-  SMARKETS.stderr.on('data', err => {
-    console.error(`SMARKETS BOT err`);
+  MATCHBOOK.stderr.on('data', err => {
+    console.error(`MATCHBOOK BOT err`);
     console.error(err.toString());
-    console.log(`terminating existing Smarkets BOT`);
-    process.kill(SMARKETS.pid);
-    console.log(`respawning Smarkets BOT`);
-    return spawnSmarketsBot();
+    console.log(`terminating existing Matchbook BOT`);
+    process.kill(MATCHBOOK.pid);
+    console.log(`respawning matchbook BOT`);
+    return spawnMatchbookBot();
   });
 
-  SMARKETS.on('error', err => {
-    console.error(`SMARKETS CP err`);
+  MATCHBOOK.on('error', err => {
+    console.error(`MATCHBOOK CP err`);
     console.error(err);
-    console.log(`terminating existing Smarkets BOT`);
-    process.kill(SMARKETS.pid);
-    console.log(`respawning Smarkets BOT`);
-    return spawnSmarketsBot();
+    console.log(`terminating existing Matchbook BOT`);
+    process.kill(MATCHBOOK.pid);
+    console.log(`respawning Matchbook BOT`);
+    return spawnMatchbookBot();
   });
 
-  SMARKETS.on('close', code => {
+  MATCHBOOK.on('close', code => {
     if(code < 1) {
-      return console.log(`SMARKETS BOT closed normally`);
+      return console.log(`MATCHBOOK BOT closed normally`);
     } else {
-      return console.error(`SMARKETS BOT closed abnormally`);
+      return console.error(`MATCHBOOK BOT closed abnormally`);
     }
   });
 }
@@ -522,13 +522,13 @@ async function listenForHREventClose() {
  async function checkEventEnd() {
    console.log('checkEventEnd invoked...');
    // get all events on page
-   const events = await page.$$eval(HR_EVENT_LINKS_SELECTOR, (events, BETFAIR_URL) => {
+   const events = await page.$$eval(HR_EVENT_LINKS_SELECTOR, (events, BETDAQ_URL) => {
      console.log('querying for events...');
-     const eventNotEnded = events.filter(event => event.href == BETFAIR_URL);
+     const eventNotEnded = events.filter(event => event.href == BETDAQ_URL);
      console.log('eventNotEnded obj...');
      console.log(eventNotEnded);
      return eventNotEnded;
-   }, BETFAIR_URL);
+   }, BETDAQ_URL);
    if(events.length > 0) {// event has NOT ended
      console.log(`event has NOT ended for ${EVENT_LABEL}...`);
      console.log('closing puppeteer browser and rechecking in 5 mins...');
@@ -537,8 +537,8 @@ async function listenForHREventClose() {
    } else {
      console.log(`event has ended for ${EVENT_LABEL}...`);
      console.log('terminating BOTs and market-controller processes...');
-     process.kill(BETFAIR.pid);
-     process.kill(SMARKETS.pid);
+     process.kill(BETDAQ.pid);
+     process.kill(MATCHBOOK.pid);
      const marketControllersKeysArray = Object.keys(marketControllers);
      marketControllersKeysArray.forEach(key => process.kill(marketControllers[key].pid));
      await browser.close();
@@ -617,8 +617,8 @@ async function listenForGenericEventClose() {
    } else {
      console.log(`event has ended for ${EVENT_LABEL}...`);
      console.log('terminating BOTs and market-controller processes...');
-     process.kill(BETFAIR.pid);
-     process.kill(SMARKETS.pid);
+     process.kill(BETDAQ.pid);
+     process.kill(MATCHBOOK.pid);
      const marketControllersKeysArray = Object.keys(marketControllers);
      marketControllersKeysArray.forEach(key => process.kill(marketControllers[key].pid));
      await browser.close();

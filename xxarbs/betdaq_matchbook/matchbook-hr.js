@@ -13,9 +13,9 @@ const
 
     EVENT_URL = process.env.BETFAIR_URL,
     EVENT_LABEL = process.argv[2],
-    EMAIL_SELECTOR = '#ssc-liu',
-    PWD_SELECTOR = '#ssc-lipw',
-    LOGIN_BTN_SELECTOR = '#ssc-lis',
+    EMAIL_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-fields > div:nth-child(1) > div > input',
+    PWD_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-fields > div:nth-child(2) > div > input',
+    LOGIN_BTN_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-buttons > a.mb-button.mb-button.mb-button--wider.mb-button--primary',
     SELECTIONS_CONTAINER_SELECTOR = '#app-next > div > div.mb-app__containerChildren > div > div > div.mb-event__markets.mb-event__markets--standalone > div:nth-child(1) > div.mb-market__runners',
     MATCHED_AMOUNT_SELECTOR = '#app-next > div > div.mb-app__containerChildren > div > div > div:nth-child(1) > div > div > span:nth-child(2)',
     RACE_START_SELECTOR = '#main-wrapper > div > div.scrollable-panes-height-taker > div > div.page-content.nested-scrollable-pane-parent > div > div.bf-col-xxl-17-24.bf-col-xl-16-24.bf-col-lg-16-24.bf-col-md-15-24.bf-col-sm-14-24.bf-col-14-24.center-column.bfMarketSettingsSpace.bf-module-loading.nested-scrollable-pane-parent > div:nth-child(1) > div > div > div > div > div.event-header > div > span.race-status.default',  
@@ -25,11 +25,10 @@ const
     BET_VALUES_SELECTOR = 'div.bet-values',
     PRICE_INPUT_SELECTOR = 'input.price-input',
     SIZE_INPUT_SELECTOR = 'input.size-input',
-    SUBMIT_BET_SELECTOR = 'button.betslip-submit-btn',
+    SUBMIT_BET_SELECTOR = '#app-next > div > div:nth-child(4) > div > div.mb-betslip-tabs > div.mb-betslip-tabs__content > div > div.mb-betslip-offers__container-headers > div.mb-betslip-offers__controls > a.mb-betslip-offers__control.mb-betslip-offers__control--submit-all > svg',
     SCREEN_SHOT_DIR = './screenshots/',
-
-
-    LOGIN_LINK_SELECCTOR = '#mb-login-join-button';
+    LOGIN_LINK_SELECTOR = '#mb-login-join-button',
+    MODAL_SELECTOR = 'body > div.ReactModalPortal > div > div';
 
 const
     EVENT_TIME_ARRAY = EVENT_LABEL.split('|'),
@@ -52,7 +51,15 @@ async function bot() {
         timeout: 180000
     });
     await page.waitFor(30 * 1000);
-    // wait for EMAIL and PWD selectors to be available
+     
+      //wait for LOGIN LINK  button to be available before clicking
+    await  page.waitForSelector(LOGIN_LINK, {timeout:30000});
+    await  page.click(LOGIN_LINK, {time:3000});
+
+
+     //wait for form modal to load
+    await page.waitForSelector(MODAL_SELECTOR, {timeout: 30000});
+     //wait form password and email input fields to load 
     await page.waitForSelector(EMAIL_SELECTOR, { timeout: 30000 });
     await page.waitForSelector(PWD_SELECTOR, { timeout: 30000 });
     // enter email
@@ -64,10 +71,14 @@ async function bot() {
     // click login button
     await page.click(LOGIN_BTN_SELECTOR);
     await page.waitFor(30 * 1000);
+
     // ensure race container selector available
-    await page.waitForSelector(SELECTIONS_CONTAINER_SELECTOR, {
-        timeout: 180000
+	const parentContainer = await page.waitForSelector(SELECTIONS_CONTAINER_SELECTOR, {
+		timeout: 180000
     });
+    
+    if (!!parentContainer) {
+
     // allow 'page' instance to output any calls to browser log to process obj
     page.on('console', data => process.send(data.text()));
     // bind to races container and lsiten for updates to , bets etc
@@ -116,7 +127,7 @@ async function bot() {
                         odds,
                         liquidity,
                         SELECTION;
-                    SELECTION = e.el.parentElement.children[0].innerText;
+                        SELECTION = e.el.parentElement.children[0].innerText;
 
                     if ((e.el.children[1].className == 'mb-price__odds') && (e.el.className == 'mb-price mb-price--back  mb-price--level0 ')) {
                         betType = 'b0';
@@ -192,6 +203,26 @@ async function bot() {
                         liquidity = e.el.children[2].textContent;
 
                     }
+                     //checks for trutiness of  data selected 
+                     if (!!betType && !!odds && !!liquidity && !!SELECTION) {
+                        let timestamp = new Date();
+                        timestamp = timestamp.toISOString();
+                        let matchedAmount = document.querySelector(MATCHED_AMOUNT_SELECTOR).innerText;
+                        matchedAmount = Number(matchedAmount.replace(/\D/g, ''));
+                        const data = {
+                            betType,
+                            matchedAmount,
+                            timestamp,
+                            odds: Number(odds),
+                            liquidity: Number(liquidity.slice(1)),
+                            selection: SELECTION.replace(/\d|\n/g, ''),
+
+                        };
+                        const output = JSON.stringify(data);
+                        console.log(output);
+                    }
+
+                
                 });
             });
             observer.observe(target, {
@@ -203,7 +234,7 @@ async function bot() {
             });
 
            
-        }, MATCHED_AMOUNT_SELECTOR);
+        }, MATCHED_AMOUNT_SELECTOR, EVENT_TIME_STR, RACE_START_SELECTOR);
 
     // implement PLACEBET feature
     async function placeBet(SELECTION, TYPE, TARGET_ODDS, TARGET_LIQUIDITY) {
@@ -227,7 +258,7 @@ async function bot() {
         await page.$$eval(RUNNERS_SELECTOR, (targets, SELECTION, TYPE) => {
             try {
                 targets.filter(target => {// filter for SELECTION
-                    if (target.children[0].children[1].children[1].children[0].children[0].children[0].children[2].children[0].innerText.split('\n')[0] == SELECTION) {
+                    if (target.parentElement.children[0].innerText == SELECTION) {
                         if (TYPE == 'bet') {
                             target.children[3].firstChild.click();
                             return true
@@ -317,6 +348,12 @@ async function bot() {
         return placeBet(selection, type, odds, '2.00');
         //return placeBet(selection, type, odds, liquidity);
     });
+
+} else {
+    //output message in the terminal that the parent container is not found
+    console.log('Parent Container Not Found!!!')
+}
+
 }
 
 // execute scraper

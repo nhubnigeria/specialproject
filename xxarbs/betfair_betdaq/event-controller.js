@@ -20,13 +20,15 @@ const
   EventCardModel = require('./models/event-cards'),
   sendEmail = require('./send-mail'),
   BUCKET = 'xx-arbs-bet-screenshots',
-  SMARKETS_URL = process.env.SMARKETS_URL,
+  // SMARKETS_URL = process.env.SMARKETS_URL,
   BETDAQ_URL = process.env.BETDAQ_URL,
   BETFAIR_URL = process.env.BETFAIR_URL,
   // SMARKETS_EVENTS_CONTAINER_SELECTOR = 'ul.contracts',
-  BETDAQ_EVENTS_CONTAINER = 'table.dataTable.marketViewSelections',  
-  SMARKETS_SELECTIONS_SELECTOR = 'div.contract-info',
+  BETDAQ_EVENTS_CONTAINER_SELECTOR = 'table.dataTable.marketViewSelections',  
+  // SMARKETS_SELECTIONS_SELECTOR = 'div.contract-info',
+  BETDAQ_SELECTIONS_SELECTOR = 'table > tbody > tr > td.gep-namesection',
   EVENT_END_URL = process.env.EVENT_END_URL,
+  //cannot find their source
   HR_EVENT_LINKS_SELECTOR = 'a.race-link',
   GENERIC_EVENT_LINKS_SELECTOR = 'span.event-name',
   MSG_EMAIL = 'simon@percayso.com, paul@percayso.com',
@@ -83,17 +85,17 @@ async function getSelections() {
   });
   await page.waitFor(10 * 1000);
   // ensure race container selector available
-  await page.waitForSelector(SMARKETS_EVENTS_CONTAINER_SELECTOR);
+  await page.waitForSelector(BETDAQ_EVENTS_CONTAINER_SELECTOR);
   // allow 'page' instance to output any calls to browser log to node log
   page.on('console', data => console.log(data.text()));
-  console.log('SMARKETS_EVENTS_CONTAINER_SELECTOR found, continuing...');
+  console.log('BETDAQ_EVENTS_CONTAINER_SELECTOR found, continuing...');
   // get list of selections
-  selectionsList = await page.$$eval(SMARKETS_SELECTIONS_SELECTOR, (targets, flag) => {
+  selectionsList = await page.$$eval(BETDAQ_SELECTIONS_SELECTOR, (targets, flag) => {
     let selectionsList = [];
     if (flag == 'HR') {
       targets.filter(target => {
-        if (target.parentElement.nextElementSibling.children[0].children[0].className == 'price-section') {
-          const selection = target.children[1].children[0].children[0].innerText;
+        if (target.parentElement.parentElement.parentElement.parentElement.parentElement.className == 'marketViewSelectionRow gep-row') {
+          const selection = target.children[0].innerText;
           console.log(`selection info for HR: ${selection}`);
           return selectionsList.push(selection);
         }
@@ -121,7 +123,7 @@ async function createEventCard() {
     EVENT_ARR,
     timeLabel = moment().format('L');
   timeLabel = timeLabel.split('/').reverse().join('-');
-  let URL_ARR = SMARKETS_URL.split('/');
+  let URL_ARR = BETDAQ_URL.split('/');
   sport = URL_ARR[6];
   if (sport == 'horse-racing') {
     EVENT_ARR = URL_ARR.slice(7);
@@ -178,7 +180,7 @@ function forkMarketController(SELECTION, eventIdentifiers) {
           odds: B0O,
           type: 'bet'
         });
-        return SMARKETS.SEND({
+        return BETDAQ.SEND({
           selection,
           liquidity,
           odds: L0O,
@@ -192,7 +194,7 @@ function forkMarketController(SELECTION, eventIdentifiers) {
           odds: L0O,
           type: 'lay'
         });
-        return SMARKETS.SEND({
+        return BETDAQ.SEND({
           selection,
           liquidity,
           odds: B0O,
@@ -231,7 +233,7 @@ function spawnBetfairBot() {
       return selectionsList.forEach(marketController => {
         if (marketController in marketControllers) {
           marketControllers[marketController].send({
-            exchange: 'smarkets',
+            exchange: 'bedaq',
             alert: 'race started'
           });
           return marketControllers[marketController].send({

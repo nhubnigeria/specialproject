@@ -116,7 +116,7 @@ async function bot() {
             liquidity,
             SELECTION;
           SELECTION = e.el.parentElement.parentElement.parentElement.parentElement.children[0].children[1].children[1].children[0].children[0].children[0].children[2].children[0].innerText.split('\n')[0];
-          // check 12 conditions
+          // check 12 conditions for deltas
           if ((e.el.className == 'bet-button-price') && (e.el.parentElement.parentElement.parentElement.className == 'bet-buttons back-cell last-back-cell')) {
             betType = 'b0';
             odds = e.el.innerText;
@@ -177,6 +177,8 @@ async function bot() {
             odds = e.el.parentElement.children[0].innerText;
             liquidity = e.el.innerText;
           }
+
+          // checking for truthyness
           if (!!betType && !!odds && !!liquidity && !!SELECTION) {
             let timestamp = new Date();
             timestamp = timestamp.toISOString();

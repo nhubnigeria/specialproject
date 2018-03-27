@@ -10,7 +10,7 @@ const P = require('puppeteer');
 // module variables
 const
 
-    EVENT_URL = process.env.BETFAIR_URL,
+    EVENT_URL = process.env.MATCHBOOK_URL,
     EVENT_LABEL = process.argv[2],
     EMAIL_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-fields > div:nth-child(1) > div > input',
     PWD_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-fields > div:nth-child(2) > div > input',
@@ -83,7 +83,7 @@ async function bot() {
     // bind to races container and lsiten for updates to , bets etc
     await page.$eval(SELECTIONS_CONTAINER_SELECTOR,
         (target, MATCHED_AMOUNT_SELECTOR, EVENT_TIME_STR, RACE_START_SELECTOR) => {
-            // listen for raceStart
+            // listen for race to start
             function raceStarts() {
                 // get target time from eventLabel and present time
                 const
@@ -120,13 +120,15 @@ async function bot() {
                         value: ed.target.textContent,
                         oldValue: ed.oldValue
                     };
-
+                    // setting up variables
                     let
                         betType,
                         odds,
                         liquidity,
                         SELECTION;
                         SELECTION = e.el.parentElement.children[0].innerText;
+
+                        // 12 condition validation for deltas 
 
                     if ((e.el.children[1].className == 'mb-price__odds') && (e.el.className == 'mb-price mb-price--back  mb-price--level0 ')) {
                         betType = 'b0';
@@ -350,7 +352,7 @@ async function bot() {
 
 } else {
     //output message in the terminal that the parent container is not found
-    console.log('Parent Container Not Found!!!')
+    // console.log('hashh!!!')
 }
 
 }

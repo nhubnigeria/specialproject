@@ -22,11 +22,11 @@ const
   BUCKET = 'xx-arbs-bet-screenshots',
   MATCHBOOK_URL = process.env.MATCHBOOK_URL,
   BETFAIR_URL = process.env.BETFAIR_URL,
-  MATCHBOOK_EVENTS_CONTAINER_SELECTOR = '#app-next > div > div.mb-app__containerChildren > div > div > div.mb-event__markets.mb-event__markets--standalone > div:nth-child(1) > div.mb-market__runners',
-  MATCHBOK_SELECTIONS_SELECTOR = 'tr.runner-line',
+  MATCHBOOK_EVENTS_CONTAINER_SELECTOR = 'div.mb-market__runners',
+  MATCHBOOK_SELECTIONS_SELECTOR = 'h4.mb-clippable__spacer',
   EVENT_END_URL = process.env.EVENT_END_URL,
   HR_EVENT_LINKS_SELECTOR = '',
-  GENERIC_EVENT_LINKS_SELECTOR = '',
+  //GENERIC_EVENT_LINKS_SELECTOR = '',
   MSG_EMAIL = 'simon@percayso.com, paul@percayso.com',
   ENDPOINT = process.env.ENDPOINT;
 
@@ -90,13 +90,14 @@ async function getSelections() {
     let selectionsList = [];
     if(flag == 'HR') {
       targets.filter(target => {
-        // if(target.parentElement.nextElementSibling.children[0].children[0].className == 'price-section') {
-        //   const selection = target.children[1].children[0].children[0].innerText;
-        //   console.log(`selection info for HR: ${selection}`);
-        //   return selectionsList.push(selection);
-        // }
+        if(target.parentElement.parentElement.parentElement.parentElement.className == 'mb-runner') {
+          const selection = target.children[0].children[1].children[0].children[2].textContent;
+          console.log(`selection info for HR: ${selection}`);
+          return selectionsList.push(selection);
+        }
       });
-    } else {
+    }
+     else {
       targets.forEach(target => {
         const selection = target.innerText;
         console.log(`selection info for GENERIC: ${selection}`);
@@ -376,18 +377,18 @@ function spawnMatchbookBot() {
     console.error(`MATCHBOOK BOT err`);
     console.error(err.toString());
     console.log(`terminating existing Matchbook BOT`);
-    process.kill(SMARKETS.pid);
+    process.kill(MATCHBOOK.pid);
     console.log(`respawning Matchbook BOT`);
-    return spawnSmarketsBot();
+    return spawnMatchbookBot();
   });
 
   MATCHBOOK.on('error', err => {
     console.error(`MATCHBOOK CP err`);
     console.error(err);
     console.log(`terminating existing Matchbook BOT`);
-    process.kill(SMARKETS.pid);
+    process.kill(MATCHBOOK.pid);
     console.log(`respawning Matchbook BOT`);
-    return spawnSmarketsBot();
+    return spawnMatchbookBot();
   });
 
   MATCHBOOK.on('close', code => {

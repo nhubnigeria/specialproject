@@ -287,7 +287,7 @@ function checkForArbs(exchange, data) {
           odds: data.odds,
           liquidity: data.liquidity
         };
-        log.info('betfair b0 seen - no smarkets l0');
+        log.info('betfair b0 seen - no Matchbook l0');
         return log.info(arbTrigger);
       }
       else {// check if arbs candidate exists

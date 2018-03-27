@@ -66,20 +66,19 @@ async function bot() {
         timeout: 180000
     });
 
-    //dont forget to ask spencer about this
 
-    // const frame = await page.frames().find(f => f.name() === FRAME_NAME);
-    //  //checks if frame with name mainFrame is available
-    // if (!!frame) {
-    //     // ensure race container selector available
-    //     await frame.waitForSelector(SELECTIONS_CONTAINER_SELECTOR, {
-    //         timeout: 180000
-    //     }).catch((error) => {
-    //         console.log('Selector Not Found', error);
-    //         process.exit(1);
-    //     });
+    const frame = await page.frames().find(f => f.name() === FRAME_NAME);
+     //checks if frame with name mainFrame is available
+    if (!!frame) {
+        // ensure race container selector available
+        await frame.waitForSelector(SELECTIONS_CONTAINER_SELECTOR, {
+            timeout: 180000
+        }).catch((error) => {
+            console.log('Selector Not Found', error);
+            process.exit(1);
+        });
 
-    //ask spencer about this tomorrow how to go aabout it
+    }
 
 
     // allow 'page' instance to output any calls to browser log to process obj

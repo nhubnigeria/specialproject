@@ -21,8 +21,10 @@ const
   sendEmail = require('./send-mail'),
   BUCKET = 'xx-arbs-bet-screenshots',
   SMARKETS_URL = process.env.SMARKETS_URL,
+  BETDAQ_URL = process.env.BETDAQ_URL,
   BETFAIR_URL = process.env.BETFAIR_URL,
-  SMARKETS_EVENTS_CONTAINER_SELECTOR = 'ul.contracts',
+  // SMARKETS_EVENTS_CONTAINER_SELECTOR = 'ul.contracts',
+  BETDAQ_EVENTS_CONTAINER = 'table.dataTable.marketViewSelections',  
   SMARKETS_SELECTIONS_SELECTOR = 'div.contract-info',
   EVENT_END_URL = process.env.EVENT_END_URL,
   HR_EVENT_LINKS_SELECTOR = 'a.race-link',
@@ -207,7 +209,7 @@ function spawnBots() {
   // spawn the BOTS
   console.log(`spawning the streaming bots`);
   spawnBetfairBot();
-  spawnSmarketsBot();
+  spawnBetdaqBot();
   return Promise.resolve(true);
 }
 
@@ -318,17 +320,17 @@ function spawnBetfairBot() {
   });
 }
 
-function spawnSmarketsBot() {
-  console.log(`Spawning Smarkets BOT`);
+function spawnBetdaqBot() {
+  console.log(`Spawning Betdaq BOT`);
 
-  SMARKETS = spawn('node', ['./smarkets-hr.js'], {
+  BETDAQ = spawn('node', ['./betdaq-hr.js'], {
     stdio: ['pipe', 'ipc', 'pipe']
   });
 
   // listen for data
 
-  SMARKETS.on('message', data => {
-    console.log('data from Smarkets...');
+  BETDAQ.on('message', data => {
+    console.log('data from Betdaq...');
     const dataObj = JSON.parse(data);
     if (!!dataObj.screenshot) {
       // SETUP
@@ -367,36 +369,36 @@ function spawnSmarketsBot() {
       const marketController = dataObj.selection;
       if (marketController in marketControllers) {
         return marketControllers[marketController].send({
-          exchange: 'smarkets',
+          exchange: 'betdaq',
           payload: dataObj
         });
       }
     }
   });
 
-  SMARKETS.stderr.on('data', err => {
-    console.error(`SMARKETS BOT err`);
+  BETDAQ.stderr.on('data', err => {
+    console.error(`Betdaq BOT err`);
     console.error(err.toString());
-    console.log(`terminating existing Smarkets BOT`);
-    process.kill(SMARKETS.pid);
-    console.log(`respawning Smarkets BOT`);
+    console.log(`terminating existing Betdaq BOT`);
+    process.kill(BETDAQ.pid);
+    console.log(`respawning Betdaq BOT`);
     return spawnSmarketsBot();
   });
 
-  SMARKETS.on('error', err => {
-    console.error(`SMARKETS CP err`);
+  BETDAQ.on('error', err => {
+    console.error(`BETDAQ CP err`);
     console.error(err);
-    console.log(`terminating existing Smarkets BOT`);
-    process.kill(SMARKETS.pid);
-    console.log(`respawning Smarkets BOT`);
-    return spawnSmarketsBot();
+    console.log(`terminating existing Betdaq BOT`);
+    process.kill(BETDAQ.pid);
+    console.log(`respawning Betdaq BOT`);
+    return spawnBetdaqBot();
   });
 
-  SMARKETS.on('close', code => {
+  BETDAQ.on('close', code => {
     if (code < 1) {
-      return console.log(`SMARKETS BOT closed normally`);
+      return console.log(`BETDAQ BOT closed normally`);
     } else {
-      return console.error(`SMARKETS BOT closed abnormally`);
+      return console.error(`BETDAQ BOT closed abnormally`);
     }
   });
 }
@@ -540,7 +542,7 @@ async function listenForHREventClose() {
       console.log(`event has ended for ${EVENT_LABEL}...`);
       console.log('terminating BOTs and market-controller processes...');
       process.kill(BETFAIR.pid);
-      process.kill(SMARKETS.pid);
+      process.kill(BETDAQ.pid);
       const marketControllersKeysArray = Object.keys(marketControllers);
       marketControllersKeysArray.forEach(key => process.kill(marketControllers[key].pid));
       await browser.close();
@@ -620,7 +622,7 @@ async function listenForGenericEventClose() {
       console.log(`event has ended for ${EVENT_LABEL}...`);
       console.log('terminating BOTs and market-controller processes...');
       process.kill(BETFAIR.pid);
-      process.kill(SMARKETS.pid);
+      process.kill(BETDAQ.pid);
       const marketControllersKeysArray = Object.keys(marketControllers);
       marketControllersKeysArray.forEach(key => process.kill(marketControllers[key].pid));
       await browser.close();

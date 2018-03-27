@@ -50,7 +50,7 @@ let
     l2: null,
     matchedAmount: null
   },
-  smarketsDeltas = {
+  betdaqDeltas = {
     b0: null,
     b1: null,
     b2: null,
@@ -62,7 +62,7 @@ let
 
 let
   BETFAIR,
-  SMARKETS,
+  BETDAQ,
   currentArb,
   ARBS = {};
 
@@ -186,7 +186,7 @@ function saveBotData(exchange, data) {
   if (exchange == 'betfair') {
     return saveBetfairData(data);
   } else if (exchange == 'smarkets') {
-    return saveSmarketsData(data);
+    return saveBetdaqData(data);
   }
 }
 
@@ -236,25 +236,25 @@ function saveBetfairData(data) {
   }
 }
 
-function saveSmarketsData(data) {
-  if (!smarketsDeltas[data.betType]) {// check if first time cell seen
-    smarketsDeltas[data.betType] = {
+function saveBetdaqData(data) {
+  if (!betdaqDeltas[data.betType]) {// check if first time cell seen
+    betdaqDeltas[data.betType] = {
       odds: data.odds,
       liquidity: data.liquidity
     };
-    smarketsDeltas.matchedAmount = data.matchedAmount;
+    betdaqDeltas.matchedAmount = data.matchedAmount;
     return saveData(data);
   }
   else {// cell already exists
     // check if matched amount has changed
-    if (smarketsDeltas.matchedAmount == data.matchedAmount) {// has NOT changed don't save new matchedAmount
+    if (betdaqDeltas.matchedAmount == data.matchedAmount) {// has NOT changed don't save new matchedAmount
       delete data.matchedAmount;
     }
     else {// has changed, update smarketsDeltas.matchedAmount and save new matchedAmount
-      smarketsDeltas.matchedAmount = data.matchedAmount;
+      betdaqDeltas.matchedAmount = data.matchedAmount;
     }
     // save new info for smarketsDeltas
-    smarketsDeltas[data.betType] = {
+    betdaqDeltas[data.betType] = {
       odds: data.odds,
       liquidity: data.liquidity
     };
@@ -269,9 +269,9 @@ function saveSmarketsData(data) {
       }
     });
     try {
-      const addedNewSmarketsData = await query.exec();
-      console.log('addedNewSmarketsData...');
-      console.log(addedNewSmarketsData);
+      const addedNewBetdaqData = await query.exec();
+      console.log('addedNewBetdaqData...');
+      console.log(addedNewBetdaqData);
       return Promise.resolve(true);
     }
     catch (err) {
@@ -286,26 +286,26 @@ function checkForArbs(exchange, data) {
   console.log(`checkForArbs invoked for ${exchange}`);
   if ((exchange == 'betfair') && ((data.betType == 'b0') || (data.betType == 'l0'))) {
     if (data.betType == 'b0') {// check if b0
-      if ((!arbTrigger.smarkets.l0.odds) || (!arbTrigger.smarkets.l0.liquidity)) {// check if smarkets l0 odds not initialized
+      if ((!arbTrigger.betdaq.l0.odds) || (!arbTrigger.betdaq.l0.liquidity)) {// check if smarkets l0 odds not initialized
         arbTrigger.betfair.b0 = {
           odds: data.odds,
           liquidity: data.liquidity
         };
-        log.info('betfair b0 seen - no smarkets l0');
+        log.info('betfair b0 seen - no betdaq l0');
         return log.info(arbTrigger);
       }
       else {// check if arbs candidate exists
         const
           B0O = data.odds,
           B0L = data.liquidity,
-          L0O = arbTrigger.smarkets.l0.odds,
-          L0L = arbTrigger.smarkets.l0.liquidity;
+          L0O = arbTrigger.betdaq.l0.odds,
+          L0L = arbTrigger.betdaq.l0.liquidity;
         if (((B0O - 1) / (L0O - 1)) > 1.02) {// candidate exists
           log.info('candidate arb seen triggered by betfair b0...');
           // create shallow copy of betfairDeltas, smarketsDeltas and currentArb
           let
             B = Object.assign({}, betfairDeltas),
-            S = Object.assign({}, smarketsDeltas),
+            S = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
           log.info('created shallow copies of betfairDeltas, smarketsDeltas and currentArb...');
           // update the B.b0 to new values
@@ -410,28 +410,28 @@ function checkForArbs(exchange, data) {
       }
     }
     else if (data.betType == 'l0') {// check if l0
-      if ((!arbTrigger.smarkets.b0.odds) || (!arbTrigger.smarkets.b0.liquidity)) {// check if smarkets b0 not initialized
+      if ((!arbTrigger.betdaq.b0.odds) || (!arbTrigger.betdaq.b0.liquidity)) {// check if smarkets b0 not initialized
         arbTrigger.betfair.l0 = {
           odds: data.odds,
           liquidity: data.liquidity
         };
-        log.info('betfair l0 seen - no smarkets b0');
+        log.info('betfair l0 seen - no betdaq b0');
         return log.info(arbTrigger);
       }
       else {// check if arbs candidate exists
         const
           L0O = data.odds,
           L0L = data.liquidity,
-          B0O = arbTrigger.smarkets.b0.odds,
-          B0L = arbTrigger.smarkets.b0.liquidity;
+          B0O = arbTrigger.betdaq.b0.odds,
+          B0L = arbTrigger.betdaq.b0.liquidity;
         if (((B0O - 1) / (L0O - 1)) > 1.02) {// candidate exists
           log.info('candidate arb seen triggered by betfair l0...');
           // create shallow copy of betfairDeltas, smarketsDeltas and currentArb
           let
             B = Object.assign({}, betfairDeltas),
-            S = Object.assign({}, smarketsDeltas),
+            S = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
-          log.info('created shallow copies of betfairDeltas, smarketsDeltas and currentArb...');
+          log.info('created shallow copies of betfairDeltas, betdaqDeltas and currentArb...');
           // update the B.l0 to new values
           B.l0 = {
             odds: L0O,
@@ -477,7 +477,7 @@ function checkForArbs(exchange, data) {
             selection: SELECTION,
             timestampFrom: data.timestamp,
             timestampTo: '',
-            summary: `Bet ${SELECTION} on Smarkets for £${targetLiquidity} at ${B0O}, Lay on Betfair for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
+            summary: `Bet ${SELECTION} on Betdaq for £${targetLiquidity} at ${B0O}, Lay on Betfair for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
             b: B,
             s: S
           };
@@ -529,14 +529,14 @@ function checkForArbs(exchange, data) {
       }
     }
   }
-  else if ((exchange == 'smarkets') && ((data.betType == 'b0') || (data.betType == 'l0'))) {
+  else if ((exchange == 'betdaq') && ((data.betType == 'b0') || (data.betType == 'l0'))) {
     if (data.betType == 'b0') {// check if b0
       if ((!arbTrigger.betfair.l0.odds) || (!arbTrigger.betfair.l0.liquidity)) {// check if betfair l0 not initialized
-        arbTrigger.smarkets.b0 = {
+        arbTrigger.betdaq.b0 = {
           odds: data.odds,
           liquidity: data.liquidity
         };
-        log.info('smarkets b0 seen - no betfair l0');
+        log.info('betdaq b0 seen - no betfair l0');
         return log.info(arbTrigger);
       }
       else {// check if arbs candidate exists
@@ -546,13 +546,13 @@ function checkForArbs(exchange, data) {
           L0O = arbTrigger.betfair.l0.odds,
           L0L = arbTrigger.betfair.l0.liquidity;
         if (((B0O - 1) / (L0O - 1)) > 1.02) {// candidate exists
-          log.info('candidate arb seen triggered by smarkets b0...');
-          // create shallow copy of betfairDeltas, smarketsDeltas and currentArb
+          log.info('candidate arb seen triggered by betdaq b0...');
+          // create shallow copy of betfairDeltas, betdaqDeltas and currentArb
           let
             B = Object.assign({}, betfairDeltas),
-            S = Object.assign({}, smarketsDeltas),
+            S = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
-          log.info('created shallow copies of betfairDeltas, smarketsDeltas and currentArb...');
+          log.info('created shallow copies of betfairDeltas, betdaqDeltas and currentArb...');
           // update the B.l0 to new values
           B.l0 = {
             odds: L0O,
@@ -598,7 +598,7 @@ function checkForArbs(exchange, data) {
             selection: SELECTION,
             timestampFrom: data.timestamp,
             timestampTo: '',
-            summary: `Bet ${SELECTION} on Smarkets for £${targetLiquidity} at ${B0O}, Lay on Betfair for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
+            summary: `Bet ${SELECTION} on betdaq for £${targetLiquidity} at ${B0O}, Lay on Betfair for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
             b: B,
             s: S
           };
@@ -644,7 +644,7 @@ function checkForArbs(exchange, data) {
         }
         else {// candidate does NOT exist
           // update in memory arbTrigger with new smarkets.b0 values
-          arbTrigger.smarkets.b0 = {
+          arbTrigger.betdaq.b0 = {
             odds: data.odds,
             liquidity: data.liquidity
           };
@@ -655,7 +655,7 @@ function checkForArbs(exchange, data) {
     }
     else if (data.betType == 'l0') {// check if l0
       if ((!arbTrigger.betfair.b0.odds) || (!arbTrigger.betfair.b0.liquidity)) {// check if oppossing cell not initialized
-        arbTrigger.smarkets.l0 = {
+        arbTrigger.betdaq.l0 = {
           odds: data.odds,
           liquidity: data.liquidity
         };
@@ -673,7 +673,7 @@ function checkForArbs(exchange, data) {
           // create shallow copy of betfairDeltas, smarketsDeltas and currentArb
           let
             B = Object.assign({}, betfairDeltas),
-            S = Object.assign({}, smarketsDeltas),
+            S = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
           log.info('created shallow copies of betfairDeltas, smarketsDeltas and currentArb...');
           // update the B.b0 to new values
@@ -721,12 +721,12 @@ function checkForArbs(exchange, data) {
             selection: SELECTION,
             timestampFrom: data.timestamp,
             timestampTo: '',
-            summary: `Bet ${SELECTION} on Betfair for £${targetLiquidity} at ${B0O}, Lay on Smarkets for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
+            summary: `Bet ${SELECTION} on Betfair for £${targetLiquidity} at ${B0O}, Lay on Betdaq for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
             b: B,
             s: S
           };
           // update in memory arbTrigger with new smarkets.l0 values
-          arbTrigger.smarkets.l0 = {
+          arbTrigger.betdaq.l0 = {
             odds: L0O,
             liquidity: L0L
           };
@@ -766,11 +766,11 @@ function checkForArbs(exchange, data) {
         }
         else {// candidate does NOT exist
           // update in memory arbTrigger with new smarkets.l0 values
-          arbTrigger.smarkets.l0 = {
+          arbTrigger.betdaq.l0 = {
             odds: data.odds,
             liquidity: data.liquidity
           };
-          log.info('updated arbTrigger due to no arbs n no inplay currentArb via smarkets l0...');
+          log.info('updated arbTrigger due to no arbs n no inplay currentArb via betdaq l0...');
           return log.info(arbTrigger);
         }
       }

@@ -125,7 +125,9 @@ async function createEventCard() {
   if(sport == 'horse-racing' ) {
     EVENT_ARR = URL_ARR.slice(6);
     EVENT_ARR =(EVENT_ARR[0]+'-'+EVENT_ARR[1]).replace(/\(|\)/g, '').split("-");
-       date  =  EVENT_ARR[2] +''+ EVENT_ARR[1] +','+ EVENT_ARR[3]; 
+       date  =  EVENT_ARR[2] +''+ EVENT_ARR[1] +','+ EVENT_ARR[3];
+       date = moment(date, 'MMMM D, YYYY');
+       date =  date.format('YYYY-M-D'); 
        
     eventLabel = EVENT_ARR[0] +'|'+ date +' '+ EVENT_ARR[4] + ':' +EVENT_ARR[5];
     EVENT_LABEL = eventLabel;
@@ -333,47 +335,6 @@ function spawnBetdaqBot() {
   BETDAQ.on('message', data => {
     console.log('data from Betdaq...');
     const dataObj = JSON.parse(data);
-    if(!!dataObj.screenshot) {
-      // SETUP
-
-      const
-        attachmentPath = dataObj.screenshot,
-        screenshotNameArray = attachmentPath.split('/'),
-        screenshotName = screenshotNameArray[2],
-        info = `${EVENT_LABEL} -- ${dataObj.info}`,
-        regx = /[^\d|(a-z)]/g,
-        folderName = EVENT_LABEL.replace(regx, '-'),
-        KEY = `${folderName}/${screenshotName}`;
-
-      const getBucketParams = {
-        Bucket: BUCKET
-      };
-
-      const imgUploadParams = {
-        Bucket: BUCKET,
-        Key: KEY,
-        ACL: 'public-read',
-        ContentType: 'Image/*',
-        ContentLength: imgSize,
-        StorageClass: 'REDUCED_REDUNDANCY',
-        Body: img
-      };
-      // upload IMG and send EMAIL
-      return uploadShot(attachmentPath, getBucketParams, imgUploadParams)
-        .then(url => {
-          const BODY = `The URL of the screenshot of the automated bet is ${url}`;
-          return sendEmail(info, BODY, attachmentPath);
-        })
-        .catch(err => console.error(err));
-    }
-    else {
-      const marketController = dataObj.selection;
-      if(marketController in marketControllers) {
-        return marketControllers[marketController].send({
-          exchange: 'betdaq',
-          payload: dataObj});
-      }
-    }
   });
 
   BETDAQ.stderr.on('data', err => {
@@ -469,12 +430,6 @@ const options = {
   autoIndex: false
 };
 
-process.on('SIGINT', () => {
-  mongoose.connection.close(() => {
-    console.log('Event-Controller dBase connection closed due to app termination');
-    process.exit(0);
-  });
-});
 
 function connectToDB() {
    return new Promise((resolve, reject) => {

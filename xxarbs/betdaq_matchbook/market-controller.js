@@ -7,7 +7,6 @@ const
   Promise = require('bluebird'),
   accounting = require('accounting'),
   mongoose = require('mongoose'),
-  //request = require('superagent'),
   log = require('./helpers').getLogger('APP'),
   SelectionDocModel = require('./models/selection-docs'),
   SelectionArbsDocModel = require('./models/selection-arbs-docs'),
@@ -17,9 +16,8 @@ const
   EVENT_LABEL = eventIdentifiers.eventLabel,
   SPORT = eventIdentifiers.sport,
   EVENT_DATE = eventIdentifiers.eventDate,
-  DBURL = process.env.DBURL,
-  MSG_EMAIL = 'simon@percayso.com, paul@percayso.com',
-  ENDPOINT = process.env.ENDPOINT;
+  DBURL = process.env.DBURL;
+ 
 
 let arbTrigger = {
   matchbook: {
@@ -88,14 +86,14 @@ process.on('SIGINT', () => {
 });
 
 process.on('message', data => {
-  if(!!data.alert) {
+  if (!!data.alert) {
     const reason = 'race started';
     let timestamp = new Date();
     timestamp = timestamp.toISOString();
     return endcurrentArb(timestamp, currentArb, reason);
   }
   else {
-    const {exchange, payload} = data;
+    const { exchange, payload } = data;
     log.info(`Market controller for ${SELECTION} received data from event-controller`);
     log.info(payload);
     checkForArbs(exchange, payload);
@@ -127,8 +125,8 @@ async function createSelectionDeltaDoc() {
     eventLabel: EVENT_LABEL,
     eventDate: EVENT_DATE,
     selection: SELECTION,
-    b: [],
-    s: []
+    mb: [],
+    bd: []
   };
 
   // create selectionDoc for selection if NOT exists
@@ -218,7 +216,7 @@ function saveMatchbookData(data) {
   async function saveData(data) {
     // push data obj into 'matchbook' array
     const query = SelectionDocModel.findOneAndUpdate({eventLabel: EVENT_LABEL, selection: SELECTION}, {$push: {
-        b: data
+        mb: data
       }});
     try {
       const addedNewMatchbookData = await query.exec();
@@ -262,7 +260,7 @@ function saveBetdaqData(data) {
   async function saveData(data) {
     // push data obj into 'betdaq' array
     const query = SelectionDocModel.findOneAndUpdate({eventLabel: EVENT_LABEL, selection: SELECTION}, {$push: {
-        s: data
+        bd: data
       }});
     try {
       const addedNewBetdaqData = await query.exec();
@@ -300,32 +298,21 @@ function checkForArbs(exchange, data) {
           log.info('candidate arb seen triggered by matchbook b0...');
           // create shallow copy of matchbookDeltas, betdaqDeltas and currentArb
           let
-            B = Object.assign({}, matchbookDeltas),
-            S = Object.assign({}, betdaqDeltas),
+            MB = Object.assign({}, matchbookDeltas),
+            BD = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
           log.info('created shallow copies of matchbookDeltas, betdaqDeltas and currentArb...');
-          // update the B.b0 to new values
-          B.b0 = {
+          // update the MB.b0 to new values
+          MB.b0 = {
             odds: B0O,
             liquidity: B0L
           };
-          // update the S.l0 to new values
-          S.l0 = {
+          // update the BD.l0 to new values
+          BD.l0 = {
             odds: L0O,
             liquidity: L0L
           };
-          // derive target liquidity, max liquidity, win amount and lose amount
-          /*let
-            targetLiquidity,
-            maxLiquidity;
-          if(B0L > L0L) {
-            targetLiquidity = L0L;
-            maxLiquidity = B0L;
-          }
-          else {
-            targetLiquidity = B0L;
-            maxLiquidity = L0L;
-          }*/
+          
           let maxLiquidity;
           if(B0L > L0L) {
             maxLiquidity = L0L;
@@ -336,13 +323,10 @@ function checkForArbs(exchange, data) {
           const targetLiquidity = 2;
           let WINAMT = (targetLiquidity * B0O * 0.98) - (targetLiquidity * L0O);
           let LOSEAMT = ((targetLiquidity * 0.98) - (targetLiquidity)) * (-1);
-          //WINAMT = Number(WINAMT.toFixed(2));
+          
           WINAMT = accounting.formatMoney(Number(WINAMT.toFixed(2)), "£ ");
-          //LOSEAMT = Number(LOSEAMT.toFixed(2));
+      
           LOSEAMT = accounting.formatMoney(Number(LOSEAMT.toFixed(2)), "£ ");
-
-          //const targetOdds = (B0O + L0O) / 2;
-
           // create arbsDoc object
           const arbsDoc = {
             B0O,
@@ -352,45 +336,15 @@ function checkForArbs(exchange, data) {
             timestampFrom: data.timestamp,
             timestampTo: '',
             summary: `Bet ${SELECTION} on Matchbook for £${targetLiquidity} at ${B0O}, Lay on Betdaq for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
-            b: B,
-            s: S
+            mb: MB,
+            bd: BD
           };
           // update in memory arbTrigger with new matchbook.b0 values
           arbTrigger.matchbook.b0 = {
             odds: B0O,
             liquidity: B0L
           };
-          if(!!C_Arb.timestampFrom && ((B0O < C_Arb.B0O) || (L0O > C_Arb.L0O) || (targetLiquidity < C_Arb.targetLiquidity))) {// check if conditions exist to end currentArb
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 'b',
-                lay: 's'
-              }});
-            // end currentArb and save new one
-            const reason = 'delta';
-            return saveArbs(arbsDoc, C_Arb, reason);
-          }
-          else if(!C_Arb.timestampFrom) {// confirm no currentArb
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 'b',
-                lay: 's'
-              }});
-            // save arbDoc
-            return saveArbs(arbsDoc, null, null);
-          }
+          
         }
         else {// candidate does NOT exist
           // update in memory arbTrigger with new matchbook.b0 values
@@ -422,32 +376,21 @@ function checkForArbs(exchange, data) {
           log.info('candidate arb seen triggered by matchbook l0...');
           // create shallow copy of matchbookDeltas, betdaqDeltas and currentArb
           let
-            B = Object.assign({}, matchbookDeltas),
-            S = Object.assign({}, betdaqDeltas),
+            MB = Object.assign({}, matchbookDeltas),
+            BD = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
           log.info('created shallow copies of matchbookDeltas, betdaqDeltas and currentArb...');
-          // update the B.l0 to new values
-          B.l0 = {
+          // update the MB.l0 to new values
+          MB.l0 = {
             odds: L0O,
             liquidity: L0L
           };
-          // update the S.b0 to new values
-          S.b0 = {
+          // update the BD.b0 to new values
+          BD.b0 = {
             odds: B0O,
             liquidity: B0L
           };
-          // derive target liquidity, max liquidity, win amount and lose amount
-          /*let
-            targetLiquidity,
-            maxLiquidity;
-          if(B0L > L0L) {
-            targetLiquidity = L0L;
-            maxLiquidity = B0L;
-          }
-          else {
-            targetLiquidity = B0L;
-            maxLiquidity = L0L;
-          }*/
+          
           let maxLiquidity;
           if(B0L > L0L) {
             maxLiquidity = L0L;
@@ -461,8 +404,6 @@ function checkForArbs(exchange, data) {
           WINAMT = accounting.formatMoney(Number(WINAMT.toFixed(2)), "£ ");
           LOSEAMT = accounting.formatMoney(Number(LOSEAMT.toFixed(2)), "£ ");
 
-          //const targetOdds = (B0O + L0O) / 2;
-
           // create arbsDoc object
           const arbsDoc = {
             B0O,
@@ -472,43 +413,14 @@ function checkForArbs(exchange, data) {
             timestampFrom: data.timestamp,
             timestampTo: '',
             summary: `Bet ${SELECTION} on Betdaq for £${targetLiquidity} at ${B0O}, Lay on Matchbook for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
-            b: B,
-            s: S
+            mb: MB,
+            bd: BD
           };
           // update in memory arbTrigger with new matchbook.l0 values
           arbTrigger.matchbook.l0 = {
             odds: L0O,
             liquidity: L0L
           };
-          if(!!C_Arb.timestampFrom && ((B0O < C_Arb.B0O) || (L0O > C_Arb.L0O) || (targetLiquidity < C_Arb.targetLiquidity))) {
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 's',
-                lay: 'b'
-              }});
-            const reason = 'delta';
-            return saveArbs(arbsDoc, C_Arb, reason);
-          }
-          else if(!C_Arb.timestampFrom) {
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 's',
-                lay: 'b'
-              }});
-            return saveArbs(arbsDoc, null, null);
-          }
         }
         else {// candidate does NOT exist
           arbTrigger.matchbook.l0 = {
@@ -541,32 +453,21 @@ function checkForArbs(exchange, data) {
           log.info('candidate arb seen triggered by betdaq b0...');
           // create shallow copy of matchbookDeltas, betdaqDeltas and currentArb
           let
-            B = Object.assign({}, matchbookDeltas),
-            S = Object.assign({}, betdaqDeltas),
+            MB = Object.assign({}, matchbookDeltas),
+            BD = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
           log.info('created shallow copies of matchbookDeltas, betdaqDeltas and currentArb...');
-          // update the B.l0 to new values
-          B.l0 = {
+          // update the MB.l0 to new values
+          MB.l0 = {
             odds: L0O,
             liquidity: L0L
           };
-          // update the S.b0 to new values
-          S.b0 = {
+          // update the BD.b0 to new values
+          BD.b0 = {
             odds: B0O,
             liquidity: B0L
           };
-          // derive target liquidity, max liquidity, win amount and lose amount
-          /*let
-            targetLiquidity,
-            maxLiquidity;
-          if(B0L > L0L) {
-            targetLiquidity = L0L;
-            maxLiquidity = B0L;
-          }
-          else {
-            targetLiquidity = B0L;
-            maxLiquidity = L0L;
-          }*/
+          
           let maxLiquidity;
           if(B0L > L0L) {
             maxLiquidity = L0L;
@@ -591,46 +492,15 @@ function checkForArbs(exchange, data) {
             timestampFrom: data.timestamp,
             timestampTo: '',
             summary: `Bet ${SELECTION} on Betdaq for £${targetLiquidity} at ${B0O}, Lay on Matchbook for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
-            b: B,
-            s: S
+            mb: MB,
+            bd: BD
           };
           // update in memory arbTrigger with new betdaq.b0 values
           arbTrigger.betdaq.b0 = {
             odds: B0O,
             liquidity: B0L
           };
-          // save the arbDoc
-          if(!!C_Arb.timestampFrom && ((B0O < C_Arb.B0O) || (L0O > C_Arb.L0O) || (targetLiquidity < C_Arb.targetLiquidity))) {// check if conditions exist to end currentArb
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 's',
-                lay: 'b'
-              }});
-            // end currentArb and save new one
-            const reason = 'delta';
-            return saveArbs(arbsDoc, C_Arb, reason);
-          }
-          else if(!C_Arb.timestampFrom) {// confirm no currentArb
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 's',
-                lay: 'b'
-              }});
-            // save arbDoc
-            return saveArbs(arbsDoc, null, null);
-          }
+          
         }
         else {// candidate does NOT exist
           // update in memory arbTrigger with new betdaq.b0 values
@@ -662,32 +532,21 @@ function checkForArbs(exchange, data) {
           log.info('candidate arb seen triggered by betdaq l0...');
           // create shallow copy of matchbookDeltas, betdaqDeltas and currentArb
           let
-            B = Object.assign({}, matchbookDeltas),
-            S = Object.assign({}, betdaqDeltas),
+            MB = Object.assign({}, matchbookDeltas),
+            BD = Object.assign({}, betdaqDeltas),
             C_Arb = Object.assign({}, currentArb);
           log.info('created shallow copies of matchbookDeltas, betdaqDeltas and currentArb...');
-          // update the B.b0 to new values
-          B.b0 = {
+          // update the MB.b0 to new values
+          MB.b0 = {
             odds: B0O,
             liquidity: B0L
           };
-          // update the S.l0 to new values
-          S.l0 = {
+          // update the BD.l0 to new values
+          BD.l0 = {
             odds: L0O,
             liquidity: L0L
           };
-          // derive target liquidity, max liquidity, win amount and lose amount
-          /*let
-            targetLiquidity,
-            maxLiquidity;
-          if(B0L > L0L) {
-            targetLiquidity = L0L;
-            maxLiquidity = B0L;
-          }
-          else {
-            targetLiquidity = B0L;
-            maxLiquidity = L0L;
-          }*/
+          
           let maxLiquidity;
           if(B0L > L0L) {
             maxLiquidity = L0L;
@@ -712,45 +571,15 @@ function checkForArbs(exchange, data) {
             timestampFrom: data.timestamp,
             timestampTo: '',
             summary: `Bet ${SELECTION} on Matchbook for £${targetLiquidity} at ${B0O}, Lay on Betdaq for £${targetLiquidity} at ${L0O}. Win: ${WINAMT}. Lose: ${LOSEAMT}, Max: £${maxLiquidity}`,
-            b: B,
-            s: S
+            mb: MB,
+            bd: BD
           };
           // update in memory arbTrigger with new betdaq.l0 values
           arbTrigger.betdaq.l0 = {
             odds: L0O,
             liquidity: L0L
           };
-          if(!!C_Arb.timestampFrom && ((B0O < C_Arb.B0O) || (L0O > C_Arb.L0O) || (targetLiquidity < C_Arb.targetLiquidity))) {// check if conditions exist to end currentArb
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 'b',
-                lay: 's'
-              }});
-            // end currentArb and save new one
-            const reason = 'delta';
-            return saveArbs(arbsDoc, C_Arb, reason);
-          }
-          else if(!C_Arb.timestampFrom) {// confirm no currentArb
-            // send placeBet msg
-            process.send({
-              placeBet: true,
-              payload: {
-                B0O,
-                L0O,
-                selection: SELECTION,
-                liquidity: targetLiquidity,
-                back: 'b',
-                lay: 's'
-              }});
-            // save arbDoc
-            return saveArbs(arbsDoc, null, null);
-          }
+          
         }
         else {// candidate does NOT exist
           // update in memory arbTrigger with new betdaq.l0 values
@@ -819,27 +648,7 @@ function saveArbs(arbsDoc, C_Arb, reason) {
           const used = process.memoryUsage().heapUsed / 1024 / 1024;
           const BODY = `${arbsDoc.summary}. TimestampFrom: ${arbsDoc.timestampFrom}`;
           return sendEmail(EVENT_LABEL, BODY);
-          /*return request
-            .post(ENDPOINT)
-            .set('Accept', 'application/json')
-            .send({
-              "transport": "ses",
-              "from": "noreply@valueservices.uk",
-              "to": MSG_EMAIL,
-              "subject": EVENT_LABEL,
-              "emailbody": BODY,
-              "templateName": "GenericEmail"
-            })
-            .then(resp => {
-              log.info('msg sending response...');
-              log.info(resp.statusCode);
-              log.info(`The process uses approximately ${used} MB`);
-              return Promise.resolve(true);
-            })
-            .catch(err => {
-              log.error('email sending err...');
-              return log.error(err);
-            });*/
+          
         }
         catch(err) {
           log.error('failed to add new data to selectonArbsDoc...');
@@ -907,27 +716,7 @@ function endcurrentArb(timestamp, C_Arb, reason) {
         const used = process.memoryUsage().heapUsed / 1024 / 1024;
         const BODY = `${arbsDoc.summary}. TimestampFrom: ${arbsDoc.timestampFrom}`;
         return sendEmail(EVENT_LABEL, BODY);
-        /*return request
-          .post(ENDPOINT)
-          .set('Accept', 'application/json')
-          .send({
-            "transport": "ses",
-            "from": "noreply@valueservices.uk",
-            "to": MSG_EMAIL,
-            "subject": EVENT_LABEL,
-            "emailbody": BODY,
-            "templateName": "GenericEmail"
-          })
-          .then(resp => {
-            log.info('msg sending response...');
-            log.info(resp.statusCode);
-            log.info(`The process uses approximately ${used} MB`);
-            return Promise.resolve(true);
-          })
-          .catch(err => {
-            log.error('email sending err...');
-            return log.error(err);
-          });*/
+       
       }
       catch(err) {
         log.error('failed to end old arbs doc in db...');

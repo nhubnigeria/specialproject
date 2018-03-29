@@ -175,7 +175,7 @@ router.post('/placeOrder', (req, res) => {
       err: err.err}));
 });
 
-router.post('/listInPlayOrders', (req, res) => {
+router.get('/listInPlayOrders', (req, res) => {
   return listInPlayOrders()
     .then(output => res.status(200).json({data: output}))
     .catch(err => res.status(500).json({
@@ -183,7 +183,7 @@ router.post('/listInPlayOrders', (req, res) => {
       err: err.err}));
 });
 
-router.post('/getAccountStatement', (req, res) => {
+router.get('/getAccountStatement', (req, res) => {
   return getAccountStatement()
     .then(output => res.status(200).json({data: output}))
     .catch(err => res.status(500).json({

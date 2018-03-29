@@ -157,7 +157,17 @@ async function getAccountStatement() {
 
 // routes
 router.post('/placeOrder', (req, res) => {
-  const data = req.body.data;
+  const
+    URL = req.body.url,
+    URL_ARR = URL.split('/'),
+    MKT_ID = URL_ARR.pop();
+  const data = {
+    MKT_ID,
+    SELECTION: req.body.selection,
+    SIDE: req.body.betType,
+    SIZE: req.body.odds,
+    PRICE: req.body.liquidity
+  };
   return placeOrder(data)
     .then(output => res.status(200).json({data: output}))
     .catch(err => res.status(500).json({

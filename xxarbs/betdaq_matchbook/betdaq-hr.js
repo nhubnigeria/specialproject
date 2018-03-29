@@ -23,8 +23,8 @@ const
     EMAIL_SELECTOR = 'input#username',
     PWD_SELECTOR = 'input#password',
     LOGIN_BTN_SELECTOR = '#host-loginform > table > tbody > tr > td:nth-child(3) > input.host-loginbutton',
-    EMAIL = '',
-    PASSWORD = '';
+    EMAIL = process.env.EMAIL,
+    PASSWORD = process.env.PASSWORD;
 
 
 const
@@ -116,6 +116,7 @@ async function bot() {
                     return setTimeout(verifyRaceStarts, delay);
                 }
                 raceStarts();
+
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach(function (ed) {
                         const e = {

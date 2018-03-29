@@ -22,8 +22,8 @@ const
     PWD_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-fields > div:nth-child(2) > div > input',
     LOGIN_BTN_SELECTOR = 'body > div.ReactModalPortal > div > div > div > div.mb-modal__content > div > div.mb-login__section.mb-login__section--left > div.mb-login__container-form > span > div > form > div.mb-form__container-buttons > a.mb-button.mb-button.mb-button--wider.mb-button--primary',
     LOGIN_LINK_SELECTOR = '#mb-login-join-button',
-    EMAIL = '',
-    PASSWORD = '';
+    EMAIL = process.env.EMAIL,
+    PASSWORD = process.env.PASSWORD;
 
 const
     EVENT_TIME_ARRAY = EVENT_LABEL.split('|'),

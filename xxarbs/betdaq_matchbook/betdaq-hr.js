@@ -24,7 +24,7 @@ const
     PWD_SELECTOR = 'input#password',
     LOGIN_BTN_SELECTOR = '#host-loginform > table > tbody > tr > td:nth-child(3) > input.host-loginbutton',
     EMAIL = '',
-    PASWORD = '';
+    PASSWORD = '';
 
 
 const

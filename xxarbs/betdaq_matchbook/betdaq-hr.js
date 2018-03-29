@@ -115,9 +115,7 @@ async function bot() {
                     }
                     return setTimeout(verifyRaceStarts, delay);
                 }
-
                 raceStarts();
-
                 const observer = new MutationObserver((mutations) => {
                     mutations.forEach(function (ed) {
                         const e = {

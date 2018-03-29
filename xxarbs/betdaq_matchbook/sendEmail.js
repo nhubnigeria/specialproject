@@ -1,3 +1,6 @@
+/**
+ * created by Eddie 27/03/2018
+ */
 'use strict';
 if(process.env.NODE_ENV != 'production') {
   require('dotenv').config();
@@ -11,7 +14,6 @@ const
   fs = require('fs'),
   unlinkFileAsync = promisify(fs.unlink)
   MSG_EMAIL = 'simon@percayso.com, paul@percayso.com',
-  //MSG_EMAIL = 'oakinogundeji@gmail.com',
   ENDPOINT = process.env.ENDPOINT;
 
 // define mail sender function

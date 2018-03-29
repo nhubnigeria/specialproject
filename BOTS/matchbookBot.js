@@ -1,3 +1,6 @@
+/**
+ * created by Eddie  19/03/2018
+ */
 'use strict';
 
 const puppeteer = require('puppeteer');
@@ -57,7 +60,7 @@ async function bot() {
 							liquidity,
 							SELECTION;
 						SELECTION = e.el.parentElement.children[0].innerText;
-
+						//listens for change in deltas WRT to Odds
 						if ((e.el.children[1].className == 'mb-price__odds') && (e.el.className == 'mb-price mb-price--back  mb-price--level0 ')) {
 							betType = 'b0';
 							odds = e.el.children[1].textContent;
@@ -95,6 +98,8 @@ async function bot() {
 							liquidity = e.el.children[1].textContent;
 
 						}
+
+						//listens for change in deltas WRT to Liquidity
 						else if ((e.el.children[2].className == 'mb-price__amount') && (e.el.className == 'mb-price mb-price--back  mb-price--level0 ')) {
 							betType = 'b0';
 							odds = e.el.children[1].textContent;
@@ -150,7 +155,7 @@ async function bot() {
 							//convert data JSON before outputting it
 							const output = JSON.stringify(data);
 							console.log(output);
-						} 
+						}
 					});
 				});
 				observer.observe(target, {

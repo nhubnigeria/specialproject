@@ -1,3 +1,6 @@
+/**
+ * created by Eddie  26/03/2018
+ */
 //=============================================================================
 'use strict';
 
@@ -22,7 +25,7 @@ const
     LOGIN_BTN_SELECTOR = '#host-loginform > table > tbody > tr > td:nth-child(3) > input.host-loginbutton',
     EMAIL = '',
     PASWORD = '';
-   
+
 
 const
     EVENT_TIME_ARRAY = EVENT_LABEL.split('|'),
@@ -48,7 +51,7 @@ async function bot() {
     await page.reload();
 
     await page.waitFor(30 * 1000);
-   
+
     // wait for EMAIL and PWD selectors to be available
     await page.waitForSelector(EMAIL_SELECTOR, { timeout: 30000 });
     await page.waitForSelector(PWD_SELECTOR, { timeout: 30000 });
@@ -59,9 +62,9 @@ async function bot() {
     await page.type(PWD_SELECTOR, PASSWORD, { delay: 100 });
     await page.waitFor(2 * 1000);
 
-     //wait for button selector  before clicking
-    await page.waitForSelector(LOGIN_BTN_SELECTOR, {timeout:30000});
-     // click login button
+    //wait for button selector  before clicking
+    await page.waitForSelector(LOGIN_BTN_SELECTOR, { timeout: 30000 });
+    // click login button
     await page.click(LOGIN_BTN_SELECTOR);
     await page.waitFor(30 * 1000);
 
@@ -133,7 +136,7 @@ async function bot() {
                                 SELECTION;
                             SELECTION = e.el.parentElement.parentElement.parentElement.parentElement.children[0].children[2].children[0].children[0].children[2].children[0].innerText
                             // check 12 conditions
-                             //listens for change in deltas WRT to Liquidity
+                            //listens for change in deltas WRT to Liquidity
                             if ((e.el.className == 'price') && (e.el.parentElement.parentElement.parentElement.className == 'priceBox backCell_0')) {
                                 betType = 'b0';
                                 odds = e.el.innerText;

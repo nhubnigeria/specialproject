@@ -1,0 +1,22 @@
+{
+  "name": "puppet-sample",
+  "version": "1.0.0",
+  "description": "Sample service using Puppeteer and serverless chrome with bots",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Puppeteer",
+    "Nodejs",
+    "Serverless",
+    "Chrome"
+  ],
+  "author": "Eddie",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.5",
+    "nodemailer": "^4.6.3",
+    "nodemailer-sendgrid-transport": "^0.2.0",
+    "puppeteer": "1.0.0"
+  }
+}

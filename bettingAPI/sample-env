@@ -1,0 +1,12 @@
+PORT=3030
+EMAIL=
+BETFAIR_PWD=
+ENV=
+BASE_BETTING_URL=https://api.betfair.com/exchange/betting/json-rpc/v1
+BETTING_MTHD=SportsAPING/v1.0
+JRPC_ACCOUNTS_URL=https://api.betfair.com/exchange/account/json-rpc/v1/
+ACCOUNT_MTHD=AccountAPING/v1.0
+APP_KEY=
+LOGIN_URL=https://identitysso.betfair.com/api/login
+PERSISTENCE_TYPE=PERSIST
+#PERSISTENCE_TYPE=LAPSE

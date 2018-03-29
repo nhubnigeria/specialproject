@@ -1,3 +1,6 @@
+/**
+ * created by Eddie 27/03/2018
+ */
 'use strict';
 //=============================================================================
 const mongoose = require('mongoose');
@@ -39,7 +42,7 @@ const SelectionArbsDocSchema = mongoose.Schema({
         type: String,
         default: ''
       },
-      b: {
+      mb: {
         b0: {
           odds: {
             type: Number
@@ -92,7 +95,7 @@ const SelectionArbsDocSchema = mongoose.Schema({
           type: Number
         }
       },
-      s: {
+      bd: {
         b0: {
           odds: {
             type: Number

@@ -1,3 +1,6 @@
+/**
+ * created by Eddie 19/03/2018
+ */
 //=============================================================================
 'use strict';
 
@@ -66,7 +69,7 @@ async function bot() {
                                 SELECTION;
                             SELECTION = e.el.parentElement.parentElement.parentElement.parentElement.children[0].children[2].children[0].children[0].children[2].children[0].innerText
                             // check 12 conditions
-
+                              //listens for change in deltas WRT to Liquidity
                             if ((e.el.className == 'price') && (e.el.parentElement.parentElement.parentElement.className == 'priceBox backCell_0')) {
                                 betType = 'b0';
                                 odds = e.el.innerText;
@@ -97,6 +100,8 @@ async function bot() {
                                 odds = e.el.innerText;
                                 liquidity = e.el.parentElement.children[1].innerText;
                             }
+
+                            //listens for change in deltas WRT to Odds
                             else if ((e.el.className == 'stake') && (e.el.parentElement.parentElement.parentElement.className == 'priceBox backCell_0')) {
                                 betType = 'b0';
                                 odds = e.el.parentElement.children[0].innerText;

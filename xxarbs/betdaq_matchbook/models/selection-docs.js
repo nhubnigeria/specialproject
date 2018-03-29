@@ -1,3 +1,6 @@
+/**
+ * created by Eddie 27/03/2018
+ */
 'use strict';
 //=============================================================================
 const mongoose = require('mongoose');
@@ -38,7 +41,7 @@ const SelectionDocSchema = mongoose.Schema({
       required: true
     }
   }],
-  s: [{
+  bd: [{
     betType: {
       type: String,
       required: true
@@ -62,7 +65,7 @@ const SelectionDocSchema = mongoose.Schema({
   }]
 });
 // create index on 'eventLabel'
-SelectionDocSchema.index({eventLabel: 1, selection: 1});
+SelectionDocSchema.index({ eventLabel: 1, selection: 1 });
 // compile to Model
 const SelectionDocModel = mongoose.model('SelectionDoc', SelectionDocSchema);
 // export model

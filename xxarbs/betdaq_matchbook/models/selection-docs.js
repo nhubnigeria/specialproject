@@ -19,7 +19,7 @@ const SelectionDocSchema = mongoose.Schema({
     type: String,
     required: true
   },
-  b: [{
+  mb: [{
     betType: {
       type: String,
       required: true

@@ -24,7 +24,7 @@ const
     PWD_SELECTOR = 'input#password',
     LOGIN_BTN_SELECTOR = '#host-loginform > table > tbody > tr > td:nth-child(3) > input.host-loginbutton',
     EMAIL = process.env.EMAIL,
-    PASSWORD = process.env.PASSWORD;
+    PASSWORD = process.env.BETDAQ_PWD;
 
 
 const

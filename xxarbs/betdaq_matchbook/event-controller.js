@@ -24,8 +24,7 @@ const
   BETDAQ_EVENTS_CONTAINER_SELECTOR = 'table.dataTable.marketViewSelections',
   BETDAQ_SELECTIONS_SELECTOR = 'table > tbody > tr > td.gep-namesection',
   EVENT_END_URL = process.env.EVENT_END_URL,
-  HR_EVENT_LINKS_SELECTOR = '#gep-popular-links > div > ul > li.gep-home-links.gep-popular-event-100004 > a';
- 
+  HR_EVENT_LINKS_SELECTOR = '.mb-event-header__name';
 
 let
   selectionsList,
